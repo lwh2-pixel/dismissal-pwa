@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>已放學班別</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- iOS：加入主畫面（standalone） -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="已放學班別">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- iOS 圖示（建議有；沒有也可先不放） -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- 主題色（Android/部分瀏覽器） -->
+  <meta name="theme-color" content="#0b1220">
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:rgba(255,255,255,.04);
+      --line:rgba(255,255,255,.16);
+      --text:#f5f7ff;
+      --muted:rgba(245,247,255,.78);
+      --ok:#13b36b;
+      --ok2:#0aa35f;
+
+      /* iOS 安全區（瀏海/圓角） */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0;
+      font-family: "Noto Sans TC","Microsoft JhengHei",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 0%, #162550 0%, var(--bg) 60%),
+        radial-gradient(900px 500px at 90% 30%, #0f2a3f 0%, var(--bg) 55%);
+    }
+
+    /* 滿版容器 + iOS safe area padding */
+    .app{
+      height: 100vh;
+      width: 100vw;
+      padding: calc(10px + var(--safe-top)) calc(10px + var(--safe-right))
+               calc(10px + var(--safe-bottom)) calc(10px + var(--safe-left));
+      display:flex;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    /* 若瀏覽器支援 Fullscreen API */
+    .app:fullscreen{
+      padding: calc(6px + var(--safe-top)) calc(6px + var(--safe-right))
+               calc(6px + var(--safe-bottom)) calc(6px + var(--safe-left));
+    }
+
+    .frame{
+      flex:1;
+      min-width: 0;
+      min-height: 0;
+      border-radius: 16px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.02);
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
+      display:flex;
+    }
+
+    .wrap{
+      width:100%;
+      height:100%;
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 14px 14px;
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border-radius: 14px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-width: 320px;
+    }
+    .title h1{
+      margin:0;
+      font-weight: 1000;
+      letter-spacing:.06em;
+      font-size: clamp(30px, 3.2vw, 52px);
+      line-height: 1.05;
+      text-shadow: 0 2px 18px rgba(0,0,0,.35);
+    }
+    .clock{
+      font-weight: 950;
+      letter-spacing: .04em;
+      font-size: clamp(22px, 2.3vw, 40px);
+      color: rgba(245,247,255,.92);
+      text-shadow: 0 2px 18px rgba(0,0,0,.35);
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    button{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 950;
+      cursor:pointer;
+      transition: transform .04s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    button:hover{ background: rgba(255,255,255,.12); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: linear-gradient(180deg, rgba(19,179,107,.95), rgba(10,163,95,.95));
+      border-color: rgba(19,179,107,.9);
+      color: #062012;
+    }
+    button.danger{
+      background: rgba(255, 90, 90, .12);
+      border-color: rgba(255, 90, 90, .35);
+    }
+
+    .hint{
+      margin: 0 2px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 850;
+      line-height: 1.4;
+    }
+
+    .board{
+      flex: 1;
+      min-height: 0;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      overflow:hidden;
+      background: var(--panel);
+      display:flex;
+    }
+
+    table{
+      width:100%;
+      height:100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td{
+      border:1px solid rgba(255,255,255,.12);
+      padding: 0;
+      text-align:center;
+      vertical-align: middle;
+    }
+
+    th.gradeHead{
+      width: clamp(120px, 12vw, 210px);
+      background: rgba(255,255,255,.05);
+      font-size: clamp(18px, 2.0vw, 28px);
+      font-weight: 1000;
+      letter-spacing: .12em;
+    }
+
+    th.grade{
+      background: rgba(255,255,255,.05);
+      font-size: clamp(20px, 2.2vw, 32px);
+      font-weight: 1100;
+      letter-spacing: .10em;
+      padding: 6px 6px;
+    }
+
+    th.classHead{
+      background: rgba(255,255,255,.05);
+      font-size: clamp(18px, 2.0vw, 28px);
+      font-weight: 1000;
+      letter-spacing: .10em;
+    }
+
+    td.cell{
+      background: linear-gradient(180deg, rgba(16,26,51,.95), rgba(13,22,48,.95));
+      cursor:pointer;
+      transition: background .18s ease, transform .06s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    td.cell:hover{ background: rgba(255,255,255,.09); }
+    td.cell:active{ transform: translateY(1px); }
+
+    .cellInner{
+      height: 100%;
+      width: 100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      padding: 6px 6px;
+    }
+
+    .klass{
+      font-size: clamp(18px, 2.0vw, 30px);
+      font-weight: 1100;
+      letter-spacing: .10em;
+      line-height: 1;
+    }
+
+    .status{
+      display:inline-block;
+      max-width: 92%;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 2px dashed rgba(255,255,255,.30);
+      background: rgba(255,255,255,.03);
+      color: rgba(245,247,255,.92);
+
+      font-size: clamp(18px, 2.6vw, 40px);
+      font-weight: 1100;
+      letter-spacing: .18em;
+      line-height: 1;
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    td.cell.done{
+      background: linear-gradient(180deg, rgba(19,179,107,.95), rgba(10,163,95,.95));
+    }
+    td.cell.done .status{
+      border: 2px solid rgba(6,32,18,.35);
+      background: rgba(255,255,255,.18);
+      color: #052414;
+    }
+    td.cell.done .klass{ color:#052414; }
+
+    thead tr{ height: 11%; }
+    tbody tr{ height: calc((100% - 11%) / 6); }
+
+    @media (max-height: 720px){
+      .hint{ display:none; }
+      header{ padding: 12px; }
+      .wrap{ gap: 8px; padding: 10px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <div class="frame">
+      <div class="wrap">
+        <header>
+          <div class="title">
+            <h1>今日已放學班別</h1>
+            <div class="clock" id="clock">載入中…</div>
+          </div>
+          <div class="actions">
+            <!-- iOS standalone 通常不支援真正全螢幕，但保留按鈕：iPad/桌機可用 -->
+            <button class="primary" id="btnFullscreen" type="button">全螢幕</button>
+            <button class="danger" id="btnClear" type="button">清除全部</button>
+          </div>
+        </header>
+
+        <div class="hint">
+          操作方式：點一下班別格子 → 變色並顯示「已放學」；再點一次可取消。
+          （本機會自動記錄狀態；同一台電腦重新開啟仍保留）
+        </div>
+
+        <div class="board">
+          <table id="table" aria-label="已放學班別表"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== 可自行修改的設定 ======
+    const grades = ["六年級","五年級","四年級","三年級","二年級","一年級"];
+    const sections = ["A","B","C","D"];
+    // ============================
+
+    const STORAGE_KEY = "dismissal-board-pwa-v1";
+
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function weekdayZh(d){
+      return ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"][d.getDay()];
+    }
+    function formatClock(d){
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth()+1);
+      const day = pad2(d.getDate());
+      const wd = weekdayZh(d);
+      const hh = pad2(d.getHours());
+      const mm = pad2(d.getMinutes());
+      const ss = pad2(d.getSeconds());
+      return `${y}-${m}-${day}  ${wd}  ${hh}:${mm}:${ss}`;
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return {};
+        const obj = JSON.parse(raw);
+        if(obj && typeof obj === "object") return obj;
+      }catch(e){}
+      return {};
+    }
+    function saveState(state){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    const state = loadState();
+    const table = document.getElementById("table");
+
+    function makeKey(grade, label){ return `${grade}-${label}`; }
+    function gradeNumber(gradeText){
+      const map = {"一年級":1,"二年級":2,"三年級":3,"四年級":4,"五年級":5,"六年級":6};
+      return map[gradeText] ?? gradeText;
+    }
+
+    function render(){
+      table.innerHTML = "";
+
+      const thead = document.createElement("thead");
+      const hr = document.createElement("tr");
+
+      const th0 = document.createElement("th");
+      th0.className = "gradeHead";
+      th0.textContent = "年級";
+      hr.appendChild(th0);
+
+      for(const s of sections){
+        const th = document.createElement("th");
+        th.className = "classHead";
+        th.textContent = s;
+        hr.appendChild(th);
+      }
+      thead.appendChild(hr);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+
+      grades.forEach(g=>{
+        const tr = document.createElement("tr");
+
+        const th = document.createElement("th");
+        th.className = "grade";
+        th.textContent = g;
+        tr.appendChild(th);
+
+        const gNum = gradeNumber(g);
+
+        for(const s of sections){
+          const label = `${gNum}${s}`;
+
+          const td = document.createElement("td");
+          td.className = "cell";
+          td.tabIndex = 0;
+
+          const key = makeKey(g, label);
+          const done = !!state[key];
+          if(done) td.classList.add("done");
+
+          const inner = document.createElement("div");
+          inner.className = "cellInner";
+
+          const klass = document.createElement("div");
+          klass.className = "klass";
+          klass.textContent = label;
+
+          const status = document.createElement("div");
+          status.className = "status";
+          status.textContent = done ? "已放學" : "未放學";
+
+          inner.appendChild(klass);
+          inner.appendChild(status);
+          td.appendChild(inner);
+
+          const toggle = ()=>{
+            state[key] = !state[key];
+            saveState(state);
+            td.classList.toggle("done", state[key]);
+            status.textContent = state[key] ? "已放學" : "未放學";
+          };
+
+          td.addEventListener("click", toggle);
+          td.addEventListener("keydown", (e)=>{
+            if(e.key === "Enter" || e.key === " "){
+              e.preventDefault();
+              toggle();
+            }
+          });
+
+          tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+    }
+
+    // clock
+    const clockEl = document.getElementById("clock");
+    function tick(){ clockEl.textContent = formatClock(new Date()); }
+    tick();
+    setInterval(tick, 1000);
+
+    // actions
+    document.getElementById("btnClear").addEventListener("click", ()=>{
+      if(confirm("確定要清除全部班別的「已放學」狀態嗎？")){
+        for(const k of Object.keys(state)) delete state[k];
+        saveState(state);
+        render();
+      }
+    });
+
+    // Fullscreen (桌機/部分 iPadOS 瀏覽器可用；iOS 多數情況不會真正全螢幕)
+    const app = document.getElementById("app");
+    document.getElementById("btnFullscreen").addEventListener("click", async ()=>{
+      try{
+        if(!document.fullscreenElement){
+          await app.requestFullscreen();
+        }else{
+          await document.exitFullscreen();
+        }
+      }catch(e){
+        alert("此裝置/瀏覽器可能不支援網頁全螢幕（iOS 常見限制）。");
+      }
+    });
+
+    // PWA: 註冊 Service Worker（需 HTTPS 或 localhost）
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", async () => {
+        try{
+          await navigator.serviceWorker.register("./sw.js");
+        }catch(e){
+          // 忽略：不影響主功能
+        }
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
