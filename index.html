@@ -17,6 +17,7 @@
 
     *{ box-sizing:border-box; }
     html, body{ height:100%; }
+
     body{
       margin:0;
       font-family: "Noto Sans TC","Microsoft JhengHei",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
@@ -24,19 +25,36 @@
       background:
         radial-gradient(1200px 700px at 20% 0%, #162550 0%, var(--bg) 60%),
         radial-gradient(900px 500px at 90% 30%, #0f2a3f 0%, var(--bg) 55%);
+      overflow: hidden; /* 外層不捲動，避免 iOS vh 抖動時出現雙滾動條 */
     }
 
-    /* 滿版容器：盡量用滿空間 */
+    /* 滿版容器：用 dvh/dvw（iOS 更穩），並建立 flex 佈局 */
     .app{
-  width: 100vw;
-  height: 100vh;
-  width: 100dvw;
-  height: 100dvh;
-}
+      width: 100vw;
+      height: 100vh;
+      width: 100dvw;
+      height: 100dvh;
+
+      padding: 10px;
+      padding-top: calc(10px + env(safe-area-inset-top));
+      padding-right: calc(10px + env(safe-area-inset-right));
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      padding-left: calc(10px + env(safe-area-inset-left));
+
+      display:flex;
+      align-items: stretch;
+      justify-content: stretch;
+      min-width: 0;
+      min-height: 0;
+    }
 
     /* 全螢幕時更貼邊 */
     .app:fullscreen{
       padding: 6px;
+      padding-top: calc(6px + env(safe-area-inset-top));
+      padding-right: calc(6px + env(safe-area-inset-right));
+      padding-bottom: calc(6px + env(safe-area-inset-bottom));
+      padding-left: calc(6px + env(safe-area-inset-left));
       background:
         radial-gradient(1200px 700px at 20% 0%, #162550 0%, var(--bg) 60%),
         radial-gradient(900px 500px at 90% 30%, #0f2a3f 0%, var(--bg) 55%);
@@ -62,48 +80,31 @@
       flex-direction:column;
       gap: 10px;
       min-height: 0;
+      min-width: 0;
+    }
+
     header{
-  position: relative;
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:center; /* 讓中間區塊置中 */
-  padding: 14px 14px;
-  border:1px solid var(--line);
-  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
-  border-radius: 14px;
-}
-
-/* 標題區塊固定置中 */
-.title{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  min-width: 0;          /* 不要硬卡 320px，避免小螢幕擠爆 */
-  text-align: center;    /* 文字置中 */
-  align-items: center;   /* 內部元素置中 */
-}
-
-/* 右側按鈕固定貼右 */
-.actions{
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:flex-end;
-}
+      position: relative;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:center; /* 中間置中 */
+      padding: 14px 14px;
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border-radius: 14px;
+      min-width: 0;
+    }
 
     .title{
       display:flex;
       flex-direction:column;
       gap:8px;
-      min-width: 320px;
+      min-width: 0;
+      text-align: center;
+      align-items: center;
     }
-    /* 1) 標題放大更醒目 */
+
     .title h1{
       margin:0;
       font-weight: 1000;
@@ -111,23 +112,37 @@
       font-size: clamp(30px, 3.2vw, 52px);
       line-height: 1.05;
       text-shadow: 0 2px 18px rgba(0,0,0,.35);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 92vw;
     }
-    /* 1) 日期時間放大 */
+
     .clock{
       font-weight: 950;
       letter-spacing: .04em;
       font-size: clamp(22px, 2.3vw, 40px);
       color: rgba(245,247,255,.92);
       text-shadow: 0 2px 18px rgba(0,0,0,.35);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 92vw;
     }
 
+    /* 右側按鈕固定貼右 */
     .actions{
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
       justify-content:flex-end;
     }
+
     button{
       border:1px solid var(--line);
       background: rgba(255,255,255,.08);
@@ -140,9 +155,12 @@
       transition: transform .04s ease, background .15s ease, border-color .15s ease;
       user-select:none;
       white-space:nowrap;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
     button:hover{ background: rgba(255,255,255,.12); }
     button:active{ transform: translateY(1px); }
+
     button.primary{
       background: linear-gradient(180deg, rgba(19,179,107,.95), rgba(10,163,95,.95));
       border-color: rgba(19,179,107,.9);
@@ -161,20 +179,23 @@
       line-height: 1.4;
     }
 
-    /* 2) 表格區用剩餘高度，確保 1~6 年級塞得下 */
+    /* 表格區：允許捲動，避免 iPad viewport 計算變窄時擠爆 */
     .board{
       flex: 1;
       min-height: 0;
+      min-width: 0;
       border:1px solid var(--line);
       border-radius: 14px;
-      overflow:hidden;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
       background: var(--panel);
-      display:flex;
+      display:block;
     }
 
     table{
       width:100%;
       height:100%;
+      min-width: 780px;          /* 不夠寬時改用橫向捲動，而不是壓扁 */
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -200,6 +221,7 @@
       font-weight: 1100;
       letter-spacing: .10em;
       padding: 6px 6px;
+      white-space: nowrap;
     }
 
     th.classHead{
@@ -214,6 +236,7 @@
       cursor:pointer;
       transition: background .18s ease, transform .06s ease;
       user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
     td.cell:hover{ background: rgba(255,255,255,.09); }
     td.cell:active{ transform: translateY(1px); }
@@ -234,9 +257,9 @@
       font-weight: 1100;
       letter-spacing: .10em;
       line-height: 1;
+      white-space: nowrap;
     }
 
-    /* 3) 狀態不溢出 + 盡量大（依高度自動縮放） */
     .status{
       display:inline-block;
       max-width: 92%;
@@ -266,15 +289,21 @@
     }
     td.cell.done .klass{ color:#052414; }
 
-    /* 2) 列高分配：表頭 + 6 列平均，避免底部被擋掉 */
+    /* 列高分配 */
     thead tr{ height: 11%; }
     tbody tr{ height: calc((100% - 11%) / 6); }
 
-    /* 小螢幕時：減少 hint 佔用高度，讓 6 列更容易同屏 */
+    /* 小高度時：減少 hint 佔用 */
     @media (max-height: 720px){
       .hint{ display:none; }
       header{ padding: 12px; }
       .wrap{ gap: 8px; padding: 10px; }
+    }
+
+    /* iPad 直向時：通常寬度不足，允許橫向捲動但字不要太擠 */
+    @media (orientation: portrait) and (min-width: 768px){
+      table{ min-width: 920px; }
+      button{ font-size: 17px; padding: 10px 14px; }
     }
   </style>
 </head>
@@ -449,7 +478,7 @@
       }
     });
 
-    // 2) 全螢幕：對 app 容器全螢幕（更好控制滿版）
+    // 全螢幕（iOS Safari 可能不支援；失敗就不做）
     const app = document.getElementById("app");
     document.getElementById("btnFullscreen").addEventListener("click", async ()=>{
       try{
@@ -459,7 +488,8 @@
           await document.exitFullscreen();
         }
       }catch(e){
-        alert("此瀏覽器不支援全螢幕或被禁止。");
+        // iOS Safari 常常會拋錯或不支援 requestFullscreen
+        // 這裡不要用 alert 以免干擾操作
       }
     });
 
@@ -467,6 +497,3 @@
   </script>
 </body>
 </html>
-
-
-
