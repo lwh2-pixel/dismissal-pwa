@@ -2,23 +2,8 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>已放學班別</title>
-
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="manifest.webmanifest">
-
-  <!-- iOS：加入主畫面（standalone） -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="已放學班別">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-  <!-- iOS 圖示（建議有；沒有也可先不放） -->
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-
-  <!-- 主題色（Android/部分瀏覽器） -->
-  <meta name="theme-color" content="#0b1220">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>已放學班別標示</title>
   <style>
     :root{
       --bg:#0b1220;
@@ -28,12 +13,6 @@
       --muted:rgba(245,247,255,.78);
       --ok:#13b36b;
       --ok2:#0aa35f;
-
-      /* iOS 安全區（瀏海/圓角） */
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-right: env(safe-area-inset-right, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-left: env(safe-area-inset-left, 0px);
     }
 
     *{ box-sizing:border-box; }
@@ -47,21 +26,22 @@
         radial-gradient(900px 500px at 90% 30%, #0f2a3f 0%, var(--bg) 55%);
     }
 
-    /* 滿版容器 + iOS safe area padding */
+    /* 滿版容器：盡量用滿空間 */
     .app{
       height: 100vh;
       width: 100vw;
-      padding: calc(10px + var(--safe-top)) calc(10px + var(--safe-right))
-               calc(10px + var(--safe-bottom)) calc(10px + var(--safe-left));
+      padding: 10px;
       display:flex;
       align-items: stretch;
       justify-content: stretch;
     }
 
-    /* 若瀏覽器支援 Fullscreen API */
+    /* 全螢幕時更貼邊 */
     .app:fullscreen{
-      padding: calc(6px + var(--safe-top)) calc(6px + var(--safe-right))
-               calc(6px + var(--safe-bottom)) calc(6px + var(--safe-left));
+      padding: 6px;
+      background:
+        radial-gradient(1200px 700px at 20% 0%, #162550 0%, var(--bg) 60%),
+        radial-gradient(900px 500px at 90% 30%, #0f2a3f 0%, var(--bg) 55%);
     }
 
     .frame{
@@ -84,18 +64,40 @@
       flex-direction:column;
       gap: 10px;
       min-height: 0;
-    }
-
     header{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      justify-content:space-between;
-      padding: 14px 14px;
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
-      border-radius: 14px;
-    }
+  position: relative;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center; /* 讓中間區塊置中 */
+  padding: 14px 14px;
+  border:1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  border-radius: 14px;
+}
+
+/* 標題區塊固定置中 */
+.title{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width: 0;          /* 不要硬卡 320px，避免小螢幕擠爆 */
+  text-align: center;    /* 文字置中 */
+  align-items: center;   /* 內部元素置中 */
+}
+
+/* 右側按鈕固定貼右 */
+.actions{
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+}
 
     .title{
       display:flex;
@@ -103,6 +105,7 @@
       gap:8px;
       min-width: 320px;
     }
+    /* 1) 標題放大更醒目 */
     .title h1{
       margin:0;
       font-weight: 1000;
@@ -111,6 +114,7 @@
       line-height: 1.05;
       text-shadow: 0 2px 18px rgba(0,0,0,.35);
     }
+    /* 1) 日期時間放大 */
     .clock{
       font-weight: 950;
       letter-spacing: .04em;
@@ -159,6 +163,7 @@
       line-height: 1.4;
     }
 
+    /* 2) 表格區用剩餘高度，確保 1~6 年級塞得下 */
     .board{
       flex: 1;
       min-height: 0;
@@ -211,7 +216,6 @@
       cursor:pointer;
       transition: background .18s ease, transform .06s ease;
       user-select:none;
-      -webkit-tap-highlight-color: transparent;
     }
     td.cell:hover{ background: rgba(255,255,255,.09); }
     td.cell:active{ transform: translateY(1px); }
@@ -234,6 +238,7 @@
       line-height: 1;
     }
 
+    /* 3) 狀態不溢出 + 盡量大（依高度自動縮放） */
     .status{
       display:inline-block;
       max-width: 92%;
@@ -263,9 +268,11 @@
     }
     td.cell.done .klass{ color:#052414; }
 
+    /* 2) 列高分配：表頭 + 6 列平均，避免底部被擋掉 */
     thead tr{ height: 11%; }
     tbody tr{ height: calc((100% - 11%) / 6); }
 
+    /* 小螢幕時：減少 hint 佔用高度，讓 6 列更容易同屏 */
     @media (max-height: 720px){
       .hint{ display:none; }
       header{ padding: 12px; }
@@ -284,7 +291,6 @@
             <div class="clock" id="clock">載入中…</div>
           </div>
           <div class="actions">
-            <!-- iOS standalone 通常不支援真正全螢幕，但保留按鈕：iPad/桌機可用 -->
             <button class="primary" id="btnFullscreen" type="button">全螢幕</button>
             <button class="danger" id="btnClear" type="button">清除全部</button>
           </div>
@@ -305,10 +311,10 @@
   <script>
     // ====== 可自行修改的設定 ======
     const grades = ["六年級","五年級","四年級","三年級","二年級","一年級"];
-    const sections = ["A","B","C","D"];
+    const sections = ["A","B","C","D"]; // 班別尾碼
     // ============================
 
-    const STORAGE_KEY = "dismissal-board-pwa-v1";
+    const STORAGE_KEY = "dismissal-board-v3-fullscreen-fit";
 
     function pad2(n){ return String(n).padStart(2,"0"); }
     function weekdayZh(d){
@@ -342,6 +348,7 @@
     const table = document.getElementById("table");
 
     function makeKey(grade, label){ return `${grade}-${label}`; }
+
     function gradeNumber(gradeText){
       const map = {"一年級":1,"二年級":2,"三年級":3,"四年級":4,"五年級":5,"六年級":6};
       return map[gradeText] ?? gradeText;
@@ -380,7 +387,7 @@
         const gNum = gradeNumber(g);
 
         for(const s of sections){
-          const label = `${gNum}${s}`;
+          const label = `${gNum}${s}`; // 1A/1B...
 
           const td = document.createElement("td");
           td.className = "cell";
@@ -444,7 +451,7 @@
       }
     });
 
-    // Fullscreen (桌機/部分 iPadOS 瀏覽器可用；iOS 多數情況不會真正全螢幕)
+    // 2) 全螢幕：對 app 容器全螢幕（更好控制滿版）
     const app = document.getElementById("app");
     document.getElementById("btnFullscreen").addEventListener("click", async ()=>{
       try{
@@ -454,20 +461,9 @@
           await document.exitFullscreen();
         }
       }catch(e){
-        alert("此裝置/瀏覽器可能不支援網頁全螢幕（iOS 常見限制）。");
+        alert("此瀏覽器不支援全螢幕或被禁止。");
       }
     });
-
-    // PWA: 註冊 Service Worker（需 HTTPS 或 localhost）
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", async () => {
-        try{
-          await navigator.serviceWorker.register("./sw.js");
-        }catch(e){
-          // 忽略：不影響主功能
-        }
-      });
-    }
 
     render();
   </script>
